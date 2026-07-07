@@ -145,7 +145,7 @@ def download_and_load_models():
 
     # 3. Load prediction artifacts
     prediction_artifacts = load_prediction_artifacts(
-    model_dir=BASE_DIR,  # ← changed from MODEL_DIR to BASE_DIR
+    model_dir=MODEL_DIR,  # ← back to MODEL_DIR
     classifier_file="best_classifier.pkl",
     label_encoder_file="label_encoder.pkl",
     hybrid_feature_file="hybrid_feature_names.csv",

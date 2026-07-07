@@ -1,3 +1,5 @@
+# Allow CSV files in models/
+!models/*.csv
 venv/ 
 models/ 
 reference_outputs/ 
