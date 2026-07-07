@@ -1,34 +1,59 @@
-
 import os
 import json
 import streamlit as st
 import numpy as np
 import pandas as pd
+import pickle
+import joblib
 from PIL import Image
+import torch
+import gdown
 
+# ============================================================
+# GOOGLE DRIVE FILE IDs
+# ============================================================
+RESUNET_FILE_ID = "1m7oQpHw8ter47_1ysXNyImE50mr94l5V"
+CLASSIFIER_FILE_ID = "1nDtTTLKj1mRwIOA-5tbVB18ECY5HdVaW"
+ENCODER_FILE_ID = "Y17BLuhzPCloQqBX5r7c96vmIZy1bHwcHx"
+
+# ============================================================
+# IMPORTS
+# ============================================================
 from utils.segmentation import load_segmentation_model, segment_image
 from utils.handcrafted_features import extract_all_handcrafted_features
 from utils.cnn_embeddings import load_embedding_model, extract_efficientnet_embedding
 from utils.prediction import load_prediction_artifacts, build_hybrid_vector, predict_class
 
+# ============================================================
+# PAGE CONFIG
+# ============================================================
 st.set_page_config(
     page_title="Skin Cancer Classification",
     page_icon="🧬",
     layout="wide"
 )
 
+# ============================================================
+# PATHS
+# ============================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
 CONFIG_PATH = os.path.join(BASE_DIR, "app_config.json")
 CLASS_MAPPING_PATH = os.path.join(BASE_DIR, "class_mapping.json")
 
+# ============================================================
+# LOAD CONFIG FILES
+# ============================================================
 with open(CONFIG_PATH, "r") as f:
     APP_CONFIG = json.load(f)
 
 with open(CLASS_MAPPING_PATH, "r") as f:
     CLASS_MAPPING = json.load(f)
 
+# ============================================================
+# APP UI
+# ============================================================
 st.title("Skin Lesion Classification System")
 st.caption("Full pipeline: ResUNet segmentation + handcrafted features + EfficientNet-B0 embeddings + final classifier")
 
@@ -37,15 +62,88 @@ st.warning(
     "It is not a medical diagnostic tool."
 )
 
+# ============================================================
+# FUNCTION TO DOWNLOAD AND LOAD MODELS
+# ============================================================
 @st.cache_resource
-def load_all_models():
+def download_and_load_models():
+    """
+    Downloads models from Google Drive if they don't exist locally,
+    then loads and returns them.
+    This runs only ONCE per deployment (cached).
+    """
+    # Create models directory if it doesn't exist
+    os.makedirs(MODEL_DIR, exist_ok=True)
+
+    # File paths
+    resunet_path = os.path.join(MODEL_DIR, "best_resunet.pth")
+    classifier_path = os.path.join(MODEL_DIR, "best_classifier.pkl")
+    encoder_path = os.path.join(MODEL_DIR, "label_encoder.pkl")
+    hybrid_feature_path = os.path.join(MODEL_DIR, "hybrid_feature_names.csv")
+    selected_feature_path = os.path.join(MODEL_DIR, "selected_feature_names.csv")
+
+    # ============================================================
+    # DOWNLOAD RESUNET MODEL (54 MB)
+    # ============================================================
+    if not os.path.exists(resunet_path):
+        st.info("📥 Downloading ResUNet model (54 MB)... This may take 1-2 minutes.")
+        try:
+            gdown.download(
+                f'https://drive.google.com/uc?id={RESUNET_FILE_ID}',
+                resunet_path,
+                quiet=False
+            )
+            st.success("✅ ResUNet model downloaded!")
+        except Exception as e:
+            st.error(f"❌ Failed to download ResUNet model: {e}")
+            st.stop()
+
+    # ============================================================
+    # DOWNLOAD CLASSIFIER
+    # ============================================================
+    if not os.path.exists(classifier_path):
+        st.info("📥 Downloading classifier model...")
+        try:
+            gdown.download(
+                f'https://drive.google.com/uc?id={CLASSIFIER_FILE_ID}',
+                classifier_path,
+                quiet=False
+            )
+            st.success("✅ Classifier downloaded!")
+        except Exception as e:
+            st.error(f"❌ Failed to download classifier: {e}")
+            st.stop()
+
+    # ============================================================
+    # DOWNLOAD LABEL ENCODER
+    # ============================================================
+    if not os.path.exists(encoder_path):
+        st.info("📥 Downloading label encoder...")
+        try:
+            gdown.download(
+                f'https://drive.google.com/uc?id={ENCODER_FILE_ID}',
+                encoder_path,
+                quiet=False
+            )
+            st.success("✅ Label encoder downloaded!")
+        except Exception as e:
+            st.error(f"❌ Failed to download label encoder: {e}")
+            st.stop()
+
+    # ============================================================
+    # NOW LOAD THE MODELS
+    # ============================================================
+    # 1. Load ResUNet
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     segmentation_model = load_segmentation_model(
-        model_path=os.path.join(MODEL_DIR, "best_resunet.pth"),
+        model_path=resunet_path,
         encoder_name=APP_CONFIG.get("segmentation_encoder", "resnet18")
     )
 
+    # 2. Load EfficientNet embedding model
     embedding_model, embedding_transform = load_embedding_model()
 
+    # 3. Load prediction artifacts
     prediction_artifacts = load_prediction_artifacts(
         model_dir=MODEL_DIR,
         classifier_file="best_classifier.pkl",
@@ -56,14 +154,23 @@ def load_all_models():
 
     return segmentation_model, embedding_model, embedding_transform, prediction_artifacts
 
+# ============================================================
+# LOAD MODELS (with spinner)
+# ============================================================
 with st.spinner("Loading models..."):
-    segmentation_model, embedding_model, embedding_transform, prediction_artifacts = load_all_models()
+    segmentation_model, embedding_model, embedding_transform, prediction_artifacts = download_and_load_models()
 
+# ============================================================
+# FILE UPLOADER
+# ============================================================
 uploaded_file = st.file_uploader(
     "Upload a raw skin lesion image",
     type=["jpg", "jpeg", "png"]
 )
 
+# ============================================================
+# PREDICTION PIPELINE
+# ============================================================
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
 
@@ -79,6 +186,7 @@ if uploaded_file is not None:
                 threshold=APP_CONFIG.get("mask_threshold", 0.5)
             )
 
+        # Show results
         col1, col2, col3 = st.columns(3)
         with col1:
             st.image(image, caption="Original", use_container_width=True)
