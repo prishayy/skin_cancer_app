@@ -14,7 +14,7 @@ import gdown
 # ============================================================
 RESUNET_FILE_ID = "1m7oQpHw8ter47_1ysXNyImE50mr94l5V"
 CLASSIFIER_FILE_ID = "1nDtTTLKj1mRwIOA-5tbVB18ECY5HdVaW"
-ENCODER_FILE_ID = "Y17BLuhzPCloQqBX5r7c96vmIZy1bHwcHx"
+ENCODER_FILE_ID = "17BLuhzPCloQqBX5r7c96vmIZy1bHwcHx"
 
 # ============================================================
 # IMPORTS
