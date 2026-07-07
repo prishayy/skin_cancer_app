@@ -1,0 +1,8 @@
+{
+    "image_size": 256,
+    "mask_threshold": 0.5,
+    "embedding_model": "efficientnet_b0",
+    "segmentation_model": "resunet",
+    "segmentation_encoder": "resnet18",
+    "num_classes": 8
+}

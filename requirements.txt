@@ -1,0 +1,16 @@
+streamlit
+torch
+torchvision
+opencv-python
+numpy
+pandas
+scikit-learn
+scikit-image
+scipy
+Pillow
+joblib
+lightgbm
+xgboost
+segmentation-models-pytorch
+matplotlib
+seaborn

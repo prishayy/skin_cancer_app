@@ -1,0 +1,7 @@
+{
+    "segmentation_model": "best_resunet.pth",
+    "classifier_model": "best_classifier.pkl",
+    "label_encoder": "label_encoder.pkl",
+    "hybrid_feature_names": "hybrid_feature_names.csv",
+    "selected_feature_names": "selected_feature_names.csv"
+}
