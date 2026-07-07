@@ -144,15 +144,7 @@ def download_and_load_models():
     embedding_model, embedding_transform = load_embedding_model()
 
 
-    # 3. Load prediction artifacts
-    st.write("MODEL_DIR =", MODEL_DIR)
-    st.write("Contents of models folder:")
-
-    if os.path.exists(MODEL_DIR):
-        st.write(os.listdir(MODEL_DIR))
-    else:
-        st.write("models folder does not exist")
-        
+    # 3. Load prediction artifacts    
     prediction_artifacts = load_prediction_artifacts(
     model_dir=MODEL_DIR,  # ← back to MODEL_DIR
     classifier_file="best_classifier.pkl",
