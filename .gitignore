@@ -1,14 +1,18 @@
-# Allow CSV files in models/
+venv/
+reference_outputs/
+sample_raw_images/
+__pycache__/
+
+# Ignore only model weights
+models/*.pth
+models/*.pkl
+models/*.pt
+
+# Keep CSVs
+!models/
 !models/*.csv
-venv/ 
-models/ 
-reference_outputs/ 
-sample_raw_images/ 
-__pycache__/ 
-*.pth 
-*.pkl 
-*.pt 
-*.npy 
-*.png 
-*.jpg 
-*.jpeg 
+
+*.npy
+*.png
+*.jpg
+*.jpeg
