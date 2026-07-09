@@ -8,6 +8,7 @@ import joblib
 from PIL import Image
 import torch
 import gdown
+from utils.preprocessing import preprocess_pipeline
 
 # ============================================================
 # GOOGLE DRIVE FILE IDs
@@ -143,15 +144,14 @@ def download_and_load_models():
     # 2. Load EfficientNet embedding model
     embedding_model, embedding_transform = load_embedding_model()
 
-
-    # 3. Load prediction artifacts    
+    # 3. Load prediction artifacts
     prediction_artifacts = load_prediction_artifacts(
-    model_dir=MODEL_DIR,  # ← back to MODEL_DIR
-    classifier_file="best_classifier.pkl",
-    label_encoder_file="label_encoder.pkl",
-    hybrid_feature_file="hybrid_feature_names.csv",
-    selected_feature_file="selected_feature_names.csv"
-)
+        model_dir=MODEL_DIR,
+        classifier_file="best_classifier.pkl",
+        label_encoder_file="label_encoder.pkl",
+        hybrid_feature_file="hybrid_feature_names.csv",
+        selected_feature_file="selected_feature_names.csv"
+    )
 
     return segmentation_model, embedding_model, embedding_transform, prediction_artifacts
 
@@ -173,28 +173,33 @@ uploaded_file = st.file_uploader(
 # PREDICTION PIPELINE
 # ============================================================
 if uploaded_file is not None:
+    # Load original and preprocessed image
     image = Image.open(uploaded_file).convert("RGB")
+    preprocessed = preprocess_pipeline(image)
 
     st.subheader("Input Image")
     st.image(image, caption="Uploaded image", use_container_width=True)
 
     if st.button("Run Full Prediction Pipeline"):
         with st.spinner("Running segmentation..."):
+            # IMPORTANT: Pass the preprocessed image to segmentation
             segmented_image, mask_image = segment_image(
-                pil_image=image,
+                pil_image=preprocessed,  # <-- changed from `image` to `preprocessed`
                 model=segmentation_model,
                 image_size=APP_CONFIG.get("image_size", 256),
                 threshold=APP_CONFIG.get("mask_threshold", 0.5)
             )
 
-        # Show results
-        col1, col2, col3 = st.columns(3)
+        # Show results with correct variable names
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.image(image, caption="Original", use_container_width=True)
+            st.image(image, caption="Original", use_column_width=True)
         with col2:
-            st.image(mask_image, caption="Predicted Mask", use_container_width=True)
+            st.image(preprocessed, caption="Preprocessed", use_column_width=True)
         with col3:
-            st.image(segmented_image, caption="Segmented Lesion", use_container_width=True)
+            st.image(mask_image, caption="Predicted Mask", use_column_width=True)   # fixed
+        with col4:
+            st.image(segmented_image, caption="Segmented Lesion", use_column_width=True)  # fixed
 
         with st.spinner("Extracting handcrafted features..."):
             handcrafted_features = extract_all_handcrafted_features(segmented_image)
